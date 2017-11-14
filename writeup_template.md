@@ -78,18 +78,21 @@ extracted_inliners = cloud_filtered.extract(inliners, negative=False)
 
 #### 2. Complete Exercise 2 steps: Pipeline including clustering for segmentation implemented.  
 ```python
-# Convert the object cloud to a white cloud and make Kd Tree.
-white_cloud = XYZRGB_to_XYZ(cloud_objects)
+white_cloud = XYZRGB_to_XYZ(extracted_inliers_objects) # Apply function to convert XYZRGB to XYZ
 tree = white_cloud.make_kdtree()
 
-# Apply Euclidean Clustering.
-ec = white_cloud.make_EuclideanClusterExtraction()
-ec.set_ClusterTolerance(0.05)
-ec.set_MinClusterSize(50)
-ec.set_MaxClusterSize(2000)
 
-# Extract cluster indices for separate clouds.
+# Create a cluster extraction object
+ec = white_cloud.make_EuclideanClusterExtraction()
+    
+# Set tolerances for distance threshold 
+# as well as minimum and maximum cluster size (in points)
+ec.set_ClusterTolerance(0.025)
+ec.set_MinClusterSize(13)
+ec.set_MaxClusterSize(1500)
+# Search the k-d tree for clusters
 ec.set_SearchMethod(tree)
+# Extract indices for each of the discovered clusters
 cluster_indices = ec.Extract()
 ```
 ![clustering](img/clustering.png)
