@@ -32,14 +32,139 @@
 
 #### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  
 
-You're reading it!
 
 ### Exercise 1, 2 and 3 pipeline implemented
 #### 1. Complete Exercise 1 steps. Pipeline for filtering and RANSAC plane fitting implemented.
+```python
+# PassThrough filter
+# Create a PassThrough filter object.
+passthrough = cloud_filtered.make_passthrough_filter()
+
+# Assign axis and range to the passthrough filter object.
+filter_axis = 'z'
+passthrough.set_filter_field_name(filter_axis)
+axis_min = 0.6
+axis_max = 1.1
+passthrough.set_filter_limits(axis_min, axis_max)
+
+# Finally use the filter function to obtain the resultant point cloud.
+cloud_filtered = passthrough.filter()
+```
+![filtering](img/filtering.png)
+
+```python
+# RANSAC plane segmentation
+# Create the segmentation object
+seg = cloud_filtered.make_segmenter()
+
+# Set the model you wish to fit
+seg.set_model_type(pcl.SACMODEL_PLANE)
+seg.set_method_type(pcl.SAC_RANSAC)
+
+# Max distance for a point to be considered fitting the model
+# Experiment with different values for max_distance
+# for segmenting the table
+max_distance = 0.01
+seg.set_distance_threshold(max_distance)
+
+# Call the segment function to obtain set of inliner indices and model coefficients
+inliners, coefficients = seg.segment()
+
+
+# Extract inliers
+extracted_inliners = cloud_filtered.extract(inliners, negative=False)
+```
+![extracted_inliers](img/extracted_inliers.png)
 
 #### 2. Complete Exercise 2 steps: Pipeline including clustering for segmentation implemented.  
+```python
+# Convert the object cloud to a white cloud and make Kd Tree.
+white_cloud = XYZRGB_to_XYZ(cloud_objects)
+tree = white_cloud.make_kdtree()
 
+# Apply Euclidean Clustering.
+ec = white_cloud.make_EuclideanClusterExtraction()
+ec.set_ClusterTolerance(0.05)
+ec.set_MinClusterSize(50)
+ec.set_MaxClusterSize(2000)
+
+# Extract cluster indices for separate clouds.
+ec.set_SearchMethod(tree)
+cluster_indices = ec.Extract()
+```
+![clustering](img/clustering.png)
 #### 2. Complete Exercise 3 Steps.  Features extracted and SVM trained.  Object recognition implemented.
+```python
+def rgb_to_hsv(rgb_list):
+    rgb_normalized = [1.0*rgb_list[0]/255, 1.0*rgb_list[1]/255, 1.0*rgb_list[2]/255]
+    hsv_normalized = matplotlib.colors.rgb_to_hsv([[rgb_normalized]])[0][0]
+    return hsv_normalized
+
+
+def compute_color_histograms(cloud, using_hsv=False):
+
+    # Compute histograms for the clusters
+    point_colors_list = []
+
+    # Step through each point in the point cloud
+    for point in pc2.read_points(cloud, skip_nans=True):
+        rgb_list = float_to_rgb(point[3])
+        if using_hsv:
+            point_colors_list.append(rgb_to_hsv(rgb_list) * 255)
+        else:
+            point_colors_list.append(rgb_list)
+
+    # Populate lists with color values
+    channel_1_vals = []
+    channel_2_vals = []
+    channel_3_vals = []
+
+    for color in point_colors_list:
+        channel_1_vals.append(color[0])
+        channel_2_vals.append(color[1])
+        channel_3_vals.append(color[2])
+    
+    # TODO: Compute histograms
+    r_hist = np.histogram(channel_1_vals, bins=32, range=(0, 256))
+    g_hist = np.histogram(channel_2_vals, bins=32, range=(0, 256))
+    b_hist = np.histogram(channel_3_vals, bins=32, range=(0, 256))
+
+    # TODO: Concatenate and normalize the histograms
+    hist_features = np.concatenate((r_hist[0], g_hist[0], b_hist[0])).astype(np.float64)
+
+    # Generate random features for demo mode.  
+    # Replace normed_features with your feature vector
+    normed_features = hist_features / np.sum(hist_features)
+    return normed_features 
+
+
+def compute_normal_histograms(normal_cloud):
+    norm_x_vals = []
+    norm_y_vals = []
+    norm_z_vals = []
+
+    for norm_component in pc2.read_points(normal_cloud,
+                                          field_names = ('normal_x', 'normal_y', 'normal_z'),
+                                          skip_nans=True):
+        norm_x_vals.append(norm_component[0])
+        norm_y_vals.append(norm_component[1])
+        norm_z_vals.append(norm_component[2])
+
+    # TODO: Compute histograms of normal values (just like with color)
+    x_hist = np.histogram(norm_x_vals, bins=32, range=(0, 256))
+    y_hist = np.histogram(norm_y_vals, bins=32, range=(0, 256))
+    z_hist = np.histogram(norm_z_vals, bins=32, range=(0, 256))
+
+    # TODO: Concatenate and normalize the histograms
+    hist_features = np.concatenate((x_hist[0], y_hist[0], z_hist[0])).astype(np.float64)
+
+    # Generate random features for demo mode.  
+    # Replace normed_features with your feature vector
+    normed_features = hist_features / np.sum(hist_features)
+
+    return normed_features
+```
+
 Here is an example of how to include an image in your writeup.
 
 ![demo-1](https://user-images.githubusercontent.com/20687560/28748231-46b5b912-7467-11e7-8778-3095172b7b19.png)
