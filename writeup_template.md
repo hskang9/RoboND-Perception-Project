@@ -167,7 +167,10 @@ def compute_normal_histograms(normal_cloud):
 
     return normed_features
 ```
-
+This is the confusion matrix with supporting vector machine model with 20 poses per each object. over 20 was impossible due to running out of computing resources. **500** poses are recommended for training from other [student](https://github.com/NitishPuri/RoboND-Perception-Project/blob/master/writeup_template.md)
+![svm_results](img/svm_result.png)
+Object recognition is shown below:
+![obj_recognition](img/exercise-3.png)
 Here is an example of how to include an image in your writeup.
 
 ![demo-1](https://user-images.githubusercontent.com/20687560/28748231-46b5b912-7467-11e7-8778-3095172b7b19.png)
